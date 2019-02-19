@@ -1,0 +1,37 @@
+server {
+    listen       80;
+    listen       443 ssl;
+    server_name  {vvv_hosts};
+    root         {vvv_path_to_site}/public_html;
+
+    # Nginx logs
+    error_log    {vvv_path_to_site}/log/nginx-error.log;
+    access_log   {vvv_path_to_site}/log/nginx-access.log;
+
+    # This is needed to set the PHP being used
+    set          $upstream {upstream};
+
+    {{TLS_CERT}}
+    {{TLS_KEY}}
+
+    # Nginx rules for WordPress, rewrite rules, permalinks, etc
+    include      /etc/nginx/nginx-wp-common.conf;
+
+    set $production {{LIVE_URL}};
+
+    location ~ "^/wp-content/uploads/(.*)$" {
+        expires 24h;
+        log_not_found off;
+        if (-f $request_filename) {
+            break;
+        }
+        try_files $uri $uri/ @production;
+    }
+
+    location @production {
+        resolver 8.8.8.8;
+        proxy_pass $production/$uri;
+    }
+
+}
+
